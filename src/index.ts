@@ -1,5 +1,5 @@
 import { Utils } from './utils';
-import { DefaultArtifactClient } from '@actions/artifact';
+import { Artifact, DefaultArtifactClient } from '@actions/artifact';
 import bytes from 'bytes';
 import PrettyError from 'pretty-error';
 import _ from 'lodash';
@@ -30,28 +30,105 @@ const main = async () => {
     throw new Error(`Invalid removeDirection, must be either 'newest' or 'oldest'`);
   }
 
-  const octokit = github.getOctokit(token);
-  const test = await octokit.paginate(
-    octokit.rest.actions.listWorkflowRunsForRepo.endpoint.merge({ owner: ownerName, repo: repoName, per_page: 50 }),
-    ({ data }) => data
-  );
-
-  core.info(JSON.stringify(test));
-
-  const client = new DefaultArtifactClient();
-  const listArtifactsResponse = await client.listArtifacts();
-
-  core.info(`Found ${listArtifactsResponse.artifacts.length} existing artifacts`);
-  core.info(`Artifacts: ${listArtifactsResponse.artifacts.map((artifact) => `'${artifact.name}'`).join(', ')}`);
-
-  const validPaths = await Promise.all(uploadPaths.map((path) => Utils.checkPathExists(path).then(() => path)));
+  const validPaths = await Promise.all(
+    uploadPaths.map((path) => Utils.checkPathExists(path).then((result) => (result ? path : undefined)))
+  ).then((paths) => paths.filter((path) => !_.isEmpty(path)));
 
   _.differenceWith(uploadPaths, validPaths, (a, b) => a.localeCompare(b) == 0).forEach((path) =>
-    core.warning(`Path does not exists: ${path}`)
+    core.warning(`Path does not exists and will be ignored: '${path}'`)
   );
 
+  const retry = (await import('@octokit/plugin-retry')).retry;
+  const throttling = (await import('@octokit/plugin-throttling')).throttling;
+  const config_retries_enable = process.env.CLEANUP_OPTION_ENABLE_OCTOKIT_RETRIES;
+  const config_max_allowed_retries = process.env.CLEANUP_OPTION_MAX_ALLOWED_RETRIES;
+  const enableOctokitRetries = _.isEmpty(config_retries_enable) || config_retries_enable === 'true';
+  const maxAllowedRetries = _.isEmpty(config_max_allowed_retries) ? 5 : Number(config_max_allowed_retries);
+
+  core.info(
+    `Start getting octokit client with retries ${
+      enableOctokitRetries ? 'enabled' : 'disabled'
+    }, max allowed retries: ${maxAllowedRetries}`
+  );
+
+  const octokit = github.getOctokit(
+    token,
+    {
+      request: {
+        retries: maxAllowedRetries
+      },
+      throttle: {
+        onRateLimit: (retryAfter, options) => {
+          core.warning(
+            `Request quota exhausted for request ${options.method} ${options.url}, number of total global retries: ${options.request.retryCount}`
+          );
+
+          core.warning(`Retrying after ${retryAfter} seconds`);
+
+          return enableOctokitRetries;
+        },
+        onAbuseLimit: (retryAfter, options) => {
+          core.warning(
+            `Abuse detected for request ${options.method} ${options.url}, retry count: ${options.request.retryCount}`
+          );
+
+          core.warning(`Retrying after ${retryAfter} seconds`);
+
+          return enableOctokitRetries;
+        }
+      }
+    },
+    retry,
+    throttling
+  );
+
+  core.info(`Querying all workflow runs for repository: '${ownerName}/${repoName}'`);
+
+  const listWorkflowRunsResponse = await octokit.paginate(
+    octokit.rest.actions.listWorkflowRunsForRepo.endpoint.merge({ owner: ownerName, repo: repoName, per_page: 50 }),
+    ({ data }) =>
+      data.map((run: any) => ({
+        runId: run.id as number,
+        workflowId: run.workflow_id as number,
+        status: run.status as string,
+        conclusion: run.conclusion as string
+      }))
+  );
+
+  core.info(`Found ${listWorkflowRunsResponse.length} workflow runs`);
+
+  Object.entries(_.groupBy(listWorkflowRunsResponse, (run) => run.workflowId)).forEach(([workflowId, runs]) => {
+    core.info(`Workflow ${workflowId} has ${runs.length} runs: [${runs.map((run) => run.runId).join(', ')}]`);
+  });
+
+  const client = new DefaultArtifactClient();
+  const artifacts = new Array<Artifact & { runId: number }>();
+
+  for (const workflowRun of listWorkflowRunsResponse) {
+    const listArtifactsResponse = await client.listArtifacts({
+      findBy: {
+        token: token,
+        workflowRunId: workflowRun.runId,
+        repositoryName: repoName,
+        repositoryOwner: ownerName
+      }
+    });
+
+    core.info(`Found ${listArtifactsResponse.artifacts.length} artifacts for workflow run ${workflowRun.runId}`);
+
+    for (const artifact of listArtifactsResponse.artifacts) {
+      artifacts.push({
+        ...artifact,
+        runId: workflowRun.runId
+      });
+    }
+  }
+
+  core.info(`Found ${artifacts.length} existing artifacts in total`);
+  core.info(`Listing all artifacts: ${artifacts.map((artifact) => `'${artifact.name}'`).join(', ')}`);
+
   const totalSize = _.isEmpty(requestSize) ? await Utils.calcuateMultiPathSize(validPaths) : bytes.parse(requestSize);
-  const artifactsTotalSize = listArtifactsResponse.artifacts.reduce((acc, artifact) => acc + artifact.size, 0);
+  const artifactsTotalSize = artifacts.reduce((acc, artifact) => acc + artifact.size, 0);
 
   if (totalSize < 0) {
     throw new Error('Invalid requestSize, must be a positive number');
@@ -66,7 +143,7 @@ const main = async () => {
 
   if (totalSize + artifactsTotalSize > limit) {
     const freeSpaceNeeded = totalSize + artifactsTotalSize - limit;
-    const sortedByDateArtifacts = listArtifactsResponse.artifacts.sort((a, b) =>
+    const sortedByDateArtifacts = artifacts.sort((a, b) =>
       removeDirection === 'oldest'
         ? (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0)
         : (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0)
@@ -75,15 +152,28 @@ const main = async () => {
     core.info(`Preparing to delete artifacts, require minimum space: ${bytes.format(freeSpaceNeeded)}`);
 
     for (let index = 0, deletedSize = 0; index < sortedByDateArtifacts.length; index++) {
-      const { name, size } = sortedByDateArtifacts[index];
+      const { name, size, runId } = sortedByDateArtifacts[index];
 
       if (!_.isEmpty(name)) {
-        await client.deleteArtifact(name);
+        await client.deleteArtifact(name, {
+          findBy: {
+            token: token,
+            workflowRunId: runId,
+            repositoryName: repoName,
+            repositoryOwner: ownerName
+          }
+        });
       }
 
       if ((deletedSize += size) >= freeSpaceNeeded) {
-        core.info(`Deleted ${index + 1} artifacts to free up space: ${bytes.format(deletedSize)}`);
+        core.info(
+          `Deleted ${index + 1} artifacts from workflow runId: '${runId}' to free up space: ${bytes.format(
+            deletedSize
+          )}`
+        );
+
         core.info(`Available space: ${bytes.format(limit - artifactsTotalSize + deletedSize)}`);
+
         break;
       }
     }
