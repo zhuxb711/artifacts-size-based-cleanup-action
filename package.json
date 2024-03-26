@@ -1,6 +1,6 @@
 {
   "name": "artifacts-size-based-cleanup-action",
-  "description": "Cleanup artifacts base on the available storage space to make sure the storage space is not exhausted",
+  "description": "Cleanup artifacts base on the size limit to make sure the storage space is not exhausted",
   "version": "1.0.0",
   "main": "src/index.ts",
   "scripts": {

@@ -22,6 +22,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Cleanup all artifacts
+        uses: ./
+        with:
+          limit: 0
+          requestSize: 0
+          failOnError: true
+
       - name: Create test artifact
         shell: pwsh
         run: |
@@ -58,12 +65,13 @@ jobs:
           compression-level: 0
           path: ${{env.Env_TestFilePath3}}
 
-      - name: Run cleanup action
+      - name: Run cleanup action test 1
         uses: ./
         with:
           limit: 3MB
-          failOnError: false
           requestSize: 1MB
+          failOnError: true
+          removeDirection: oldest
 
       - name: Upload test artifact 1
         uses: actions/upload-artifact@v4.3.1
@@ -73,11 +81,12 @@ jobs:
           compression-level: 0
           path: ${{env.Env_TestFilePath1}}
 
-      - name: Run cleanup action
+      - name: Run cleanup action test 2
         uses: ./
         with:
           limit: 3MB
-          failOnError: false
+          failOnError: true
+          removeDirection: oldest
           uploadPaths: |
             ${{env.Env_TestFilePath1}}
             ${{env.Env_TestFilePath2}}
@@ -107,11 +116,12 @@ jobs:
           compression-level: 0
           path: ${{env.Env_TestFilePath3}}
 
-      - name: Run cleanup action
+      - name: Run cleanup action test 3
         uses: ./
         with:
           limit: 5MB
-          failOnError: false
+          failOnError: true
+          removeDirection: oldest
           uploadPaths: |
             ${{env.Env_TestFilePath1}}
             ${{env.Env_TestFilePath2}}
@@ -125,13 +135,30 @@ jobs:
           compression-level: 0
           path: ${{env.Env_TestFilePath1}}
 
-      - name: Run cleanup action
+      - name: Run cleanup action test 4
         uses: ./
         with:
           limit: 8MB
-          failOnError: false
+          failOnError: true
+          removeDirection: oldest
           uploadPaths: |
             ${{env.Env_TestFilePath1}}
             ${{env.Env_TestFilePath2}}
             ${{env.Env_TestFilePath3}}
             ${{env.Env_TestDirectory}}
+
+      - name: Upload test artifact 2
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: Test Artifact 2
+          if-no-files-found: error
+          compression-level: 0
+          path: ${{env.Env_TestFilePath2}}
+
+      - name: Run cleanup action test 5
+        uses: ./
+        with:
+          limit: 3MB
+          requestSize: 512KB
+          failOnError: true
+          removeDirection: newest

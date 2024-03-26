@@ -1,7 +1,15 @@
-import * as fsPromise from 'fs/promises';
 import path from 'path';
+import * as fs from 'fs';
+import * as fsPromise from 'fs/promises';
 
 export class Utils {
+  static async checkPathExists(path: string): Promise<boolean> {
+    return await fsPromise
+      .access(path, fs.constants.F_OK)
+      .then(() => true)
+      .catch(() => false);
+  }
+
   static parseMultiLineInputs(input: string): string[] {
     return input
       .split(/\r?\n/)

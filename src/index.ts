@@ -1,15 +1,19 @@
+import { Utils } from './utils';
 import { DefaultArtifactClient } from '@actions/artifact';
 import bytes from 'bytes';
 import PrettyError from 'pretty-error';
-import * as core from '@actions/core';
 import _ from 'lodash';
-import { Utils } from './utils';
+import * as core from '@actions/core';
 
 const main = async () => {
   const limit = bytes.parse(core.getInput('limit'));
   const requestSize = core.getInput('requestSize');
   const removeDirection = core.getInput('removeDirection');
   const uploadPaths = Utils.parseMultiLineInputs(core.getInput('uploadPaths'));
+
+  if (limit < 0) {
+    throw new Error('Invalid limit, must be a positive number');
+  }
 
   if (_.isEmpty(requestSize) && _.isEmpty(uploadPaths)) {
     throw new Error('Either requestSize or uploadPaths must be provided');
@@ -25,8 +29,18 @@ const main = async () => {
   core.info(`Found ${listArtifactsResponse.artifacts.length} existing artifacts`);
   core.info(`Artifacts: ${listArtifactsResponse.artifacts.map((artifact) => `'${artifact.name}'`).join(', ')}`);
 
-  const totalSize = _.isEmpty(requestSize) ? await Utils.calcuateMultiPathSize(uploadPaths) : bytes.parse(requestSize);
+  const validPaths = await Promise.all(uploadPaths.map((path) => Utils.checkPathExists(path).then(() => path)));
+
+  _.differenceWith(uploadPaths, validPaths, (a, b) => a.localeCompare(b) == 0).forEach((path) =>
+    core.warning(`Path does not exists: ${path}`)
+  );
+
+  const totalSize = _.isEmpty(requestSize) ? await Utils.calcuateMultiPathSize(validPaths) : bytes.parse(requestSize);
   const artifactsTotalSize = listArtifactsResponse.artifacts.reduce((acc, artifact) => acc + artifact.size, 0);
+
+  if (totalSize < 0) {
+    throw new Error('Invalid requestSize, must be a positive number');
+  }
 
   if (totalSize > limit) {
     throw new Error(`Total size of artifacts to upload exceeds the limit: ${bytes.format(totalSize)}`);
@@ -54,7 +68,7 @@ const main = async () => {
 
       if ((deletedSize += size) >= freeSpaceNeeded) {
         core.info(`Deleted ${index + 1} artifacts to free up space: ${bytes.format(deletedSize)}`);
-        core.info(`Available space: ${bytes.format(artifactsTotalSize - deletedSize)}`);
+        core.info(`Available space: ${bytes.format(limit - artifactsTotalSize + deletedSize)}`);
         break;
       }
     }
