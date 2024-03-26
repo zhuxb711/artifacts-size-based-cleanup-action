@@ -1,5 +1,9 @@
 name: Artifact Size Based Cleanup
-description: Cleanup artifacts base on the size limit to make sure the storage space is not exhausted. Make sure run this action before uploading new artifacts.
+description: Cleanup artifacts base on the size limit to make sure the storage space is not exhausted.
+author: Ruofan <zrfcfgs@outlook.com>
+branding:
+  icon: "archive"
+  color: "yellow"
 inputs:
   token:
     description: The GitHub token used to access the repository. Must be granted access permission with 'workflow' scope.
