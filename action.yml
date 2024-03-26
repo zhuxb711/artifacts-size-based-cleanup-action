@@ -1,0 +1,23 @@
+name: Artifact Size Based Cleanup
+description: Cleanup artifacts base on the size limit to make sure the storage space is not exhausted.
+inputs:
+  limit:
+    description: The maximum size of the artifacts in bytes for current repository. Action will make sure the all artifacts size is less than this limit and reserve enough space for new artifacts. Allowed values includes - [1024, 256KB, 512MB, 1.5GB].
+    required: true
+  requestSize:
+    description: Optional. The size of the artifacts to be uploaded in bytes. If not provided, the action will calculate the size of the artifacts to be uploaded automatically. Allowed values includes - [1024, 256KB, 512MB, 1.5GB]. An exception will be thrown if both requestSize and uploadPaths are not provided.
+    required: false
+  uploadPaths:
+    description: Optional. The paths of the artifacts to be uploaded. If not provided, will use the value of requestSize. An exception will be thrown if both requestSize and uploadPaths are not provided.
+    required: false
+  failOnError:
+    description: Indicates whether the action should fail once encountering any errors.
+    required: false
+    default: true
+  removeDirection:
+    description: The direction to remove the artifacts. Allowed values includes - [oldest, newest]. If set to 'oldest', the action will remove the oldest artifacts first. If set to 'newest', the action will remove the newest artifacts first.
+    required: false
+    default: oldest
+runs:
+  using: node20
+  main: ./dist/index.js

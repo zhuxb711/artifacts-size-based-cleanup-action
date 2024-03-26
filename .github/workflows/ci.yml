@@ -1,0 +1,137 @@
+name: Action CI Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  CITest:
+    runs-on: windows-latest
+    env:
+      Env_TestFilePath1: ${{github.workspace}}\TestFile1.txt
+      Env_TestFilePath2: ${{github.workspace}}\TestFile2.txt
+      Env_TestFilePath3: ${{github.workspace}}\TestFile3.txt
+      Env_TestDirectory: ${{github.workspace}}\TestDirectory
+      Env_DownloadDirectory: ${{github.workspace}}\Downloads
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.2
+        with:
+          fetch-depth: 0
+
+      - name: Create test artifact
+        shell: pwsh
+        run: |
+          fsutil file createnew "${{env.Env_TestFilePath1}}" 1048576
+          fsutil file createnew "${{env.Env_TestFilePath2}}" 1048576
+          fsutil file createnew "${{env.Env_TestFilePath3}}" 1048576
+          New-Item -Path "${{env.Env_TestDirectory}}" -ItemType Directory
+          New-Item -Path "${{env.Env_DownloadDirectory}}" -ItemType Directory
+          Copy-Item "${{env.Env_TestFilePath1}}" -Destination "${{env.Env_TestDirectory}}"
+          Copy-Item "${{env.Env_TestFilePath2}}" -Destination "${{env.Env_TestDirectory}}"
+          Copy-Item "${{env.Env_TestFilePath3}}" -Destination "${{env.Env_TestDirectory}}"
+
+      - name: Upload test artifact 1
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: Test Artifact 1
+          if-no-files-found: error
+          compression-level: 0
+          path: ${{env.Env_TestFilePath1}}
+
+      - name: Upload test artifact 2
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: Test Artifact 2
+          if-no-files-found: error
+          compression-level: 0
+          path: ${{env.Env_TestFilePath2}}
+
+      - name: Upload test artifact 3
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: Test Artifact 3
+          if-no-files-found: error
+          compression-level: 0
+          path: ${{env.Env_TestFilePath3}}
+
+      - name: Run cleanup action
+        uses: ./
+        with:
+          limit: 3.2MB
+          failOnError: false
+          requestSize: 1MB
+
+      - name: Upload test artifact 1
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: Test Artifact 1
+          if-no-files-found: error
+          compression-level: 0
+          path: ${{env.Env_TestFilePath1}}
+
+      - name: Run cleanup action
+        uses: ./
+        with:
+          limit: 3.2MB
+          failOnError: false
+          uploadPaths: |
+            ${{env.Env_TestFilePath1}}
+            ${{env.Env_TestFilePath2}}
+            ${{env.Env_TestFilePath3}}
+
+      - name: Upload test artifact 1
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: Test Artifact 1
+          if-no-files-found: error
+          compression-level: 0
+          path: ${{env.Env_TestFilePath1}}
+
+      - name: Upload test artifact 2
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: Test Artifact 2
+          if-no-files-found: error
+          compression-level: 0
+          path: ${{env.Env_TestFilePath2}}
+
+      - name: Upload test artifact 3
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: Test Artifact 3
+          if-no-files-found: error
+          compression-level: 0
+          path: ${{env.Env_TestFilePath3}}
+
+      - name: Run cleanup action
+        uses: ./
+        with:
+          limit: 5.2MB
+          failOnError: false
+          uploadPaths: |
+            ${{env.Env_TestFilePath1}}
+            ${{env.Env_TestFilePath2}}
+            ${{env.Env_TestFilePath3}}
+
+      - name: Upload test artifact 1
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: Test Artifact 1
+          if-no-files-found: error
+          compression-level: 0
+          path: ${{env.Env_TestFilePath1}}
+
+      - name: Run cleanup action
+        uses: ./
+        with:
+          limit: 8.2MB
+          failOnError: false
+          uploadPaths: |
+            ${{env.Env_TestFilePath1}}
+            ${{env.Env_TestFilePath2}}
+            ${{env.Env_TestFilePath3}}
+            ${{env.Env_TestDirectory}}

@@ -1,0 +1,35 @@
+{
+  "name": "artifacts-size-based-cleanup-action",
+  "description": "Cleanup artifacts base on the available storage space to make sure the storage space is not exhausted",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "ncc build",
+    "watch": "ncc build -w"
+  },
+  "keywords": [
+    "github",
+    "remove",
+    "delete",
+    "artifact"
+  ],
+  "author": "Ruofan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zhuxb711/artifacts-size-based-cleanup-action"
+  },
+  "dependencies": {
+    "@actions/artifact": "^2.1.4",
+    "@actions/core": "^1.10.1",
+    "bytes": "^3.1.2",
+    "lodash": "^4.17.21",
+    "pretty-error": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/bytes": "^3.1.4",
+    "@types/lodash": "^4.17.0",
+    "@types/node": "^20.11.30",
+    "typescript": "^5.4.3"
+  }
+}
