@@ -110,7 +110,7 @@ const main = async () => {
     core.info(
       `Workflow '${runs.find((run) => run.workflowId === Number(workflowId))?.workflowName}' has ${
         runs.length
-      } runs: ['${runs.map((run) => `RunId_${run.runId}-RunName_${run.runName.replaceAll(/\s+/, '.')}`).join(', ')}']`
+      } runs: ['${runs.map((run) => `RunId_${run.runId}-RunName_${run.runName.replaceAll(/\s+/g, '.')}`).join(', ')}']`
     );
   });
 
@@ -130,7 +130,7 @@ const main = async () => {
     core.info(
       `Found ${listArtifactsResponse.artifacts.length} artifacts for workflow run: 'RunId_${
         run.runId
-      }-RunName_${run.runName.replaceAll(/\s+/, '.')}'`
+      }-RunName_${run.runName.replaceAll(/\s+/g, '.')}'`
     );
 
     for (const artifact of listArtifactsResponse.artifacts) {
@@ -148,7 +148,7 @@ const main = async () => {
         (artifact) =>
           `'WorkflowId_${artifact.workflowId}-RunId_${artifact.runId}-ArtifactId_${
             artifact.id
-          }-ArtifactName_${artifact.name.replaceAll(/\s+/, '.')}'`
+          }-ArtifactName_${artifact.name.replaceAll(/\s+/g, '.')}'`
       )
       .join(', ')}`
   );
@@ -225,7 +225,7 @@ const main = async () => {
           .map(
             (art) =>
               `'WorkflowId_${art.workflowId}-RunId_${art.runId}-ArtifactId_${art.id}-ArtifactName_${art.name.replaceAll(
-                /\s+/,
+                /\s+/g,
                 '.'
               )}'`
           )
