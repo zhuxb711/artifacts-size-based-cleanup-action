@@ -46,7 +46,7 @@ const main = async () => {
   const maxAllowedRetries = _.isEmpty(config_max_allowed_retries) ? 5 : Number(config_max_allowed_retries);
 
   core.info(
-    `Start getting octokit client with retries ${
+    `Start creating octokit client with retries ${
       enableOctokitRetries ? 'enabled' : 'disabled'
     }, max allowed retries: ${maxAllowedRetries}`
   );
@@ -58,7 +58,7 @@ const main = async () => {
         retries: maxAllowedRetries
       },
       throttle: {
-        onRateLimit: (retryAfter, options) => {
+        onRateLimit: (retryAfter: any, options: any) => {
           core.warning(
             `Request quota exhausted for request ${options.method} ${options.url}, number of total global retries: ${options.request.retryCount}`
           );
@@ -67,7 +67,7 @@ const main = async () => {
 
           return enableOctokitRetries;
         },
-        onSecondaryRateLimit: (retryAfter, options) => {
+        onSecondaryRateLimit: (retryAfter: any, options: any) => {
           core.warning(
             `Request quota exhausted for request ${options.method} ${options.url}, number of total global retries: ${options.request.retryCount}`
           );
@@ -93,48 +93,65 @@ const main = async () => {
 
   core.info(`Querying all workflow runs for repository: '${ownerName}/${repoName}'`);
 
-  const listWorkflowRunsResponse = await octokit.paginate(
+  const allWorkflowRuns = await octokit.paginate(
     octokit.rest.actions.listWorkflowRunsForRepo.endpoint.merge({ owner: ownerName, repo: repoName, per_page: 50 }),
     ({ data }) =>
       data.map((run: any) => ({
         runId: run.id as number,
+        runName: run.display_title as string,
         workflowId: run.workflow_id as number,
+        workflowName: run.name as string,
         status: run.status as string,
         conclusion: run.conclusion as string
       }))
   );
 
-  core.info(`Found ${listWorkflowRunsResponse.length} workflow runs`);
-
-  Object.entries(_.groupBy(listWorkflowRunsResponse, (run) => run.workflowId)).forEach(([workflowId, runs]) => {
-    core.info(`Workflow ${workflowId} has ${runs.length} runs: [${runs.map((run) => run.runId).join(', ')}]`);
+  Object.entries(_.groupBy(allWorkflowRuns, (run) => run.workflowId)).forEach(([workflowId, runs]) => {
+    core.info(
+      `Workflow '${runs.find((run) => run.workflowId === Number(workflowId))?.workflowName}' has ${
+        runs.length
+      } runs: ['${runs.map((run) => `RunId_${run.runId}-RunName_${run.runName.replaceAll(/\s+/, '.')}`).join(', ')}']`
+    );
   });
 
   const client = new DefaultArtifactClient();
-  const artifacts = new Array<Artifact & { runId: number }>();
+  const artifacts = new Array<Artifact & { runId: number; workflowId: number }>();
 
-  for (const workflowRun of listWorkflowRunsResponse) {
+  for (const run of allWorkflowRuns) {
     const listArtifactsResponse = await client.listArtifacts({
       findBy: {
         token: token,
-        workflowRunId: workflowRun.runId,
+        workflowRunId: run.runId,
         repositoryName: repoName,
         repositoryOwner: ownerName
       }
     });
 
-    core.info(`Found ${listArtifactsResponse.artifacts.length} artifacts for workflow run ${workflowRun.runId}`);
+    core.info(
+      `Found ${listArtifactsResponse.artifacts.length} artifacts for workflow run: 'RunId_${
+        run.runId
+      }-RunName_${run.runName.replaceAll(/\s+/, '.')}'`
+    );
 
     for (const artifact of listArtifactsResponse.artifacts) {
       artifacts.push({
         ...artifact,
-        runId: workflowRun.runId
+        runId: run.runId,
+        workflowId: run.workflowId
       });
     }
   }
 
-  core.info(`Found ${artifacts.length} existing artifacts in total`);
-  core.info(`Listing all artifacts: ${artifacts.map((artifact) => `'${artifact.name}'`).join(', ')}`);
+  core.info(
+    `Found ${artifacts.length} existing artifacts in total. Listing all artifacts: ${artifacts
+      .map(
+        (artifact) =>
+          `'WorkflowId_${artifact.workflowId}-RunId_${artifact.runId}-ArtifactId_${
+            artifact.id
+          }-ArtifactName_${artifact.name.replaceAll(/\s+/, '.')}'`
+      )
+      .join(', ')}`
+  );
 
   const totalSize = _.isEmpty(requestSize) ? await Utils.calcuateMultiPathSize(validPaths) : bytes.parse(requestSize);
   const artifactsTotalSize = artifacts.reduce((acc, artifact) => acc + artifact.size, 0);
@@ -147,8 +164,8 @@ const main = async () => {
     throw new Error(`Total size of artifacts to upload exceeds the limit: ${bytes.format(totalSize)}`);
   }
 
-  core.info(`Total size of artifacts to upload: ${bytes.format(totalSize)}`);
-  core.info(`Total size of current artifacts: ${bytes.format(artifactsTotalSize)}`);
+  core.info(`Total size that need to be reserved: ${bytes.format(totalSize)}`);
+  core.info(`Total size of all existing artifacts: ${bytes.format(artifactsTotalSize)}`);
 
   if (totalSize + artifactsTotalSize > limit) {
     const freeSpaceNeeded = totalSize + artifactsTotalSize - limit;
@@ -160,16 +177,24 @@ const main = async () => {
 
     core.info(`Preparing to delete artifacts, require minimum space: ${bytes.format(freeSpaceNeeded)}`);
 
-    const deletedArtifacts = new Array<{ name: string; runId: number; size: number }>();
+    const deletedArtifacts = new Array<{
+      id: number;
+      name: string;
+      size: number;
+      runId: number;
+      workflowId: number;
+    }>();
 
     for (let index = 0, deletedSize = 0; index < sortedByDateArtifacts.length; index++) {
-      const { name, size, runId } = sortedByDateArtifacts[index];
+      const { name, size, id, runId, workflowId } = sortedByDateArtifacts[index];
 
       if (!_.isEmpty(name)) {
         deletedArtifacts.push({
+          id: id,
           name: name,
           size: size,
-          runId: runId
+          runId: runId,
+          workflowId: workflowId
         });
 
         await client.deleteArtifact(name, {
@@ -183,22 +208,30 @@ const main = async () => {
       }
 
       if ((deletedSize += size) >= freeSpaceNeeded) {
-        Object.entries(_.groupBy(deletedArtifacts, (artifact) => artifact.runId)).forEach(([runId, artifact]) => {
-          core.info(
-            `Deleted ${artifact.length} artifacts: [${artifact
-              .map((art) => `'${art.name}'`)
-              .join(', ')}] from workflow runId ${runId} to free up space: ${bytes.format(
-              artifact.reduce((acc, a) => acc + a.size, 0)
-            )}`
-          );
-        });
-
-        core.info(`${deletedArtifacts.length} artifacts deleted during the cleanup`);
-        core.info(`Available space: ${bytes.format(limit - artifactsTotalSize + deletedSize)}`);
-
+        core.info(`Summary: available space after cleanup: ${bytes.format(limit - artifactsTotalSize + deletedSize)}`);
         break;
       }
     }
+
+    core.info(
+      `Summary: free up space after cleanup: ${bytes.format(deletedArtifacts.reduce((acc, a) => acc + a.size, 0))}`
+    );
+
+    Object.entries(_.groupBy(deletedArtifacts, (artifact) => artifact.runId)).forEach(([runId, artifact]) => {
+      core.info(
+        `Summary: ${artifact.length} artifacts deleted from workflow run '${
+          allWorkflowRuns.find((run) => run.runId === Number(runId))?.runName
+        }: [${artifact
+          .map(
+            (art) =>
+              `'WorkflowId_${art.workflowId}-RunId_${art.runId}-ArtifactId_${art.id}-ArtifactName_${art.name.replaceAll(
+                /\s+/,
+                '.'
+              )}'`
+          )
+          .join(', ')}]'`
+      );
+    });
   }
 
   core.info(`Artifacts cleanup action completed`);
