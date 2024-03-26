@@ -1,6 +1,9 @@
 name: Artifact Size Based Cleanup
 description: Cleanup artifacts base on the size limit to make sure the storage space is not exhausted. Make sure run this action before uploading new artifacts.
 inputs:
+  token:
+    description: The GitHub token used to access the repository. Must be granted with 'workflow' scope.
+    required: true
   limit:
     description: The maximum size of the artifacts in bytes for current repository. Action will make sure the all artifacts size is less than this limit and reserve enough space for new artifacts. Allowed values includes - [1024, 256KB, 512MB, 1.5GB].
     required: true

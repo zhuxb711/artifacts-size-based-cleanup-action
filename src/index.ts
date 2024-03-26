@@ -4,15 +4,22 @@ import bytes from 'bytes';
 import PrettyError from 'pretty-error';
 import _ from 'lodash';
 import * as core from '@actions/core';
+import * as github from '@actions/github';
 
 const main = async () => {
+  const token = core.getInput('token');
   const limit = bytes.parse(core.getInput('limit'));
   const requestSize = core.getInput('requestSize');
   const removeDirection = core.getInput('removeDirection');
   const uploadPaths = Utils.parseMultiLineInputs(core.getInput('uploadPaths'));
+  const [ownerName, repoName] = process.env.GITHUB_REPOSITORY.split('/').map((part) => part.trim());
 
   if (limit < 0) {
     throw new Error('Invalid limit, must be a positive number');
+  }
+
+  if (_.isEmpty(token)) {
+    throw new Error('Missing Github access token');
   }
 
   if (_.isEmpty(requestSize) && _.isEmpty(uploadPaths)) {
@@ -22,6 +29,14 @@ const main = async () => {
   if (!_.includes(['newest', 'oldest'], removeDirection)) {
     throw new Error(`Invalid removeDirection, must be either 'newest' or 'oldest'`);
   }
+
+  const octokit = github.getOctokit(token);
+  const test = await octokit.paginate(
+    octokit.rest.actions.listWorkflowRunsForRepo.endpoint.merge({ owner: ownerName, repo: repoName, per_page: 50 }),
+    ({ data }) => data
+  );
+
+  core.info(JSON.stringify(test));
 
   const client = new DefaultArtifactClient();
   const listArtifactsResponse = await client.listArtifacts();
