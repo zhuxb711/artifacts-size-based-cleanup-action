@@ -118,7 +118,7 @@ const main = async () => {
   const artifacts = new Array<Artifact & { runId: number; workflowId: number }>();
 
   for (const run of allWorkflowRuns) {
-    const listArtifactsResponse = await client.listArtifacts({
+    const allArtifactsInRun = await client.listArtifacts({
       findBy: {
         token: token,
         workflowRunId: run.runId,
@@ -128,18 +128,18 @@ const main = async () => {
     });
 
     core.info(
-      `Found ${listArtifactsResponse.artifacts.length} artifacts for workflow run: 'RunId_${
+      `Found ${allArtifactsInRun.artifacts.length} artifacts for workflow run: 'RunId_${
         run.runId
       }-RunName_${run.runName.replaceAll(/\s+/g, '.')}'`
     );
 
-    for (const artifact of listArtifactsResponse.artifacts) {
+    allArtifactsInRun.artifacts.forEach((artifact) => {
       artifacts.push({
         ...artifact,
         runId: run.runId,
         workflowId: run.workflowId
       });
-    }
+    });
   }
 
   core.info(
@@ -219,9 +219,9 @@ const main = async () => {
 
     Object.entries(_.groupBy(deletedArtifacts, (artifact) => artifact.runId)).forEach(([runId, artifact]) => {
       core.info(
-        `Summary: ${artifact.length} artifacts deleted from workflow run '${
-          allWorkflowRuns.find((run) => run.runId === Number(runId))?.runName
-        }: [${artifact
+        `Summary: ${artifact.length} artifacts deleted from workflow run 'RunId_${runId}-RunName_${allWorkflowRuns
+          .find((run) => run.runId === Number(runId))
+          ?.runName.replaceAll(/\s+/g, '.')}': [${artifact
           .map(
             (art) =>
               `'WorkflowId_${art.workflowId}-RunId_${art.runId}-ArtifactId_${art.id}-ArtifactName_${art.name.replaceAll(
@@ -229,7 +229,7 @@ const main = async () => {
                 '.'
               )}'`
           )
-          .join(', ')}]'`
+          .join(', ')}]`
       );
     });
   }
