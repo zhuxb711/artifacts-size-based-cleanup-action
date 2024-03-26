@@ -61,7 +61,7 @@ jobs:
       - name: Run cleanup action
         uses: ./
         with:
-          limit: 3.2MB
+          limit: 3MB
           failOnError: false
           requestSize: 1MB
 
@@ -76,7 +76,7 @@ jobs:
       - name: Run cleanup action
         uses: ./
         with:
-          limit: 3.2MB
+          limit: 3MB
           failOnError: false
           uploadPaths: |
             ${{env.Env_TestFilePath1}}
@@ -110,7 +110,7 @@ jobs:
       - name: Run cleanup action
         uses: ./
         with:
-          limit: 5.2MB
+          limit: 5MB
           failOnError: false
           uploadPaths: |
             ${{env.Env_TestFilePath1}}
@@ -128,7 +128,7 @@ jobs:
       - name: Run cleanup action
         uses: ./
         with:
-          limit: 8.2MB
+          limit: 8MB
           failOnError: false
           uploadPaths: |
             ${{env.Env_TestFilePath1}}

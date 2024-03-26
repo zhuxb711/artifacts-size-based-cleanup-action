@@ -22,6 +22,9 @@ const main = async () => {
   const client = new DefaultArtifactClient();
   const listArtifactsResponse = await client.listArtifacts();
 
+  core.info(`Found ${listArtifactsResponse.artifacts.length} existing artifacts`);
+  core.info(`Artifacts: ${listArtifactsResponse.artifacts.map((artifact) => `'${artifact.name}'`).join(', ')}`);
+
   const totalSize = _.isEmpty(requestSize) ? await Utils.calcuateMultiPathSize(uploadPaths) : bytes.parse(requestSize);
   const artifactsTotalSize = listArtifactsResponse.artifacts.reduce((acc, artifact) => acc + artifact.size, 0);
 
@@ -46,15 +49,18 @@ const main = async () => {
       const { name, size } = sortedByDateArtifacts[index];
 
       if (!_.isEmpty(name)) {
-        await client.deleteArtifact(name).then(() => core.info(`Deleted artifact: '${name}'`));
+        await client.deleteArtifact(name);
       }
 
       if ((deletedSize += size) >= freeSpaceNeeded) {
         core.info(`Deleted ${index + 1} artifacts to free up space: ${bytes.format(deletedSize)}`);
+        core.info(`Available space: ${bytes.format(artifactsTotalSize - deletedSize)}`);
         break;
       }
     }
   }
+
+  core.info(`Artifacts cleanup completed`);
 };
 
 try {
