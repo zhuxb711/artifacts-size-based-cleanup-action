@@ -67,6 +67,15 @@ const main = async () => {
 
           return enableOctokitRetries;
         },
+        onSecondaryRateLimit: (retryAfter, options) => {
+          core.warning(
+            `Request quota exhausted for request ${options.method} ${options.url}, number of total global retries: ${options.request.retryCount}`
+          );
+
+          core.warning(`Retrying after ${retryAfter} seconds`);
+
+          return enableOctokitRetries;
+        },
         onAbuseLimit: (retryAfter, options) => {
           core.warning(
             `Abuse detected for request ${options.method} ${options.url}, retry count: ${options.request.retryCount}`
