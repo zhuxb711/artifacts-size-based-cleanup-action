@@ -1,2 +1,2 @@
-/dist/*.ts
+/dist/*.d.ts
 /node_modules
