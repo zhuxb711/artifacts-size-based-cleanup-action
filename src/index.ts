@@ -160,10 +160,18 @@ const main = async () => {
 
     core.info(`Preparing to delete artifacts, require minimum space: ${bytes.format(freeSpaceNeeded)}`);
 
+    const deletedArtifacts = new Array<{ name: string; runId: number; size: number }>();
+
     for (let index = 0, deletedSize = 0; index < sortedByDateArtifacts.length; index++) {
       const { name, size, runId } = sortedByDateArtifacts[index];
 
       if (!_.isEmpty(name)) {
+        deletedArtifacts.push({
+          name: name,
+          size: size,
+          runId: runId
+        });
+
         await client.deleteArtifact(name, {
           findBy: {
             token: token,
@@ -175,12 +183,17 @@ const main = async () => {
       }
 
       if ((deletedSize += size) >= freeSpaceNeeded) {
-        core.info(
-          `Deleted ${index + 1} artifacts from workflow runId: '${runId}' to free up space: ${bytes.format(
-            deletedSize
-          )}`
-        );
+        Object.entries(_.groupBy(deletedArtifacts, (artifact) => artifact.runId)).forEach(([runId, artifact]) => {
+          core.info(
+            `Deleted ${artifact.length} artifacts: [${artifact
+              .map((art) => `'${art.name}'`)
+              .join(', ')}] from workflow runId ${runId} to free up space: ${bytes.format(
+              artifact.reduce((acc, a) => acc + a.size, 0)
+            )}`
+          );
+        });
 
+        core.info(`${deletedArtifacts.length} artifacts deleted during the cleanup`);
         core.info(`Available space: ${bytes.format(limit - artifactsTotalSize + deletedSize)}`);
 
         break;
@@ -188,7 +201,7 @@ const main = async () => {
     }
   }
 
-  core.info(`Artifacts cleanup completed`);
+  core.info(`Artifacts cleanup action completed`);
 };
 
 try {

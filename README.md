@@ -27,6 +27,7 @@ See also [action.yml](https://github.com/zhuxb711/artifacts-size-based-cleanup-a
 - name: Run cleanup action
   uses: zhuxb711/artifacts-size-based-cleanup-action@v1
   with:
+    token: '<Your Github token>'
     limit: 1GB
     uploadPaths: <Your path to the files or directories that pending uploads>
 ```
@@ -37,6 +38,7 @@ See also [action.yml](https://github.com/zhuxb711/artifacts-size-based-cleanup-a
 - name: Run cleanup action
   uses: zhuxb711/artifacts-size-based-cleanup-action@v1
   with:
+    token: '<Your Github token>'
     limit: 1GB
     uploadPaths: |
       <Path 1>
@@ -50,6 +52,7 @@ See also [action.yml](https://github.com/zhuxb711/artifacts-size-based-cleanup-a
 - name: Run cleanup action
   uses: zhuxb711/artifacts-size-based-cleanup-action@v1
   with:
+    token: '<Your Github token>'
     limit: 1GB
     requestSize: 512MB
 ```
@@ -60,6 +63,7 @@ See also [action.yml](https://github.com/zhuxb711/artifacts-size-based-cleanup-a
 - name: Run cleanup action
   uses: zhuxb711/artifacts-size-based-cleanup-action@v1
   with:
+    token: '<Your Github token>' # Token must be granted access permission with 'workflow' scope
     limit: 1GB # Could also set to 1024MB/512KB/2.5GB or size in bytes
     requestSize: 512MB # Optional. Fixed size you want to reserved for the new artifacts. Must set 'uploadPaths' or 'requestSize'.
     failOnError: true # Optional. Reports failure if meet any exception
