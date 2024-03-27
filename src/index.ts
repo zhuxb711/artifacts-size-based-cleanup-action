@@ -161,7 +161,7 @@ const main = async () => {
   );
 
   const simulateAndGetCompressedSize = async (path: string, compressionLevel: number) => {
-    const zipPath = __dirname + '/temp' + `/size_simulate_${uuidv4()}.zip`;
+    const zipPath = __dirname + `/size_simulate_${uuidv4()}.zip`;
     await Utils.createCompressedZipFile(path, zipPath, compressionLevel);
     return await fsPromise.stat(zipPath).then((stat) => stat.size);
   };
