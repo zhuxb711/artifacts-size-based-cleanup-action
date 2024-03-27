@@ -1,6 +1,6 @@
 import { Utils } from './utils';
 import { v4 as uuidv4 } from 'uuid';
-import { Artifact, DefaultArtifactClient } from '@actions/artifact';
+import { Artifact, DefaultArtifactClient, ListArtifactsResponse } from '@actions/artifact';
 import bytes from 'bytes';
 import PrettyError from 'pretty-error';
 import _ from 'lodash';
@@ -100,8 +100,15 @@ const main = async () => {
 
   core.info(`Querying all workflow runs for repository: '${ownerName}/${repoName}'`);
 
+  const config_paginate_size = process.env.CLEANUP_OPTION_PAGINATE_SIZE;
+  const apiCallPagniateSize = _.isEmpty(config_paginate_size) ? 50 : Number(config_paginate_size);
+
   const allWorkflowRuns = await octokit.paginate(
-    octokit.rest.actions.listWorkflowRunsForRepo.endpoint.merge({ owner: ownerName, repo: repoName, per_page: 50 }),
+    octokit.rest.actions.listWorkflowRunsForRepo.endpoint.merge({
+      owner: ownerName,
+      repo: repoName,
+      per_page: apiCallPagniateSize
+    }),
     ({ data }) =>
       data.map((run: any) => ({
         runId: run.id as number,
@@ -124,29 +131,41 @@ const main = async () => {
   const client = new DefaultArtifactClient();
   const artifacts = new Array<Artifact & { runId: number; workflowId: number }>();
 
-  for (const run of allWorkflowRuns) {
-    const allArtifactsInRun = await client.listArtifacts({
-      findBy: {
-        token: token,
-        workflowRunId: run.runId,
-        repositoryName: repoName,
-        repositoryOwner: ownerName
-      }
-    });
+  for (const workflowRun of allWorkflowRuns) {
+    const allArtifactsInRun = await client
+      .listArtifacts({
+        findBy: {
+          token: token,
+          workflowRunId: workflowRun.runId,
+          repositoryName: repoName,
+          repositoryOwner: ownerName
+        }
+      })
+      .catch<ListArtifactsResponse>((err) => {
+        core.warning(
+          `Failed to list artifacts for workflow run: 'RunId_${
+            workflowRun.runId
+          }-RunName_${workflowRun.runName.replaceAll(/\s+/g, '.')}', this run will be ignored, error: ${err.message}`
+        );
 
-    core.info(
-      `Found ${allArtifactsInRun.artifacts.length} artifacts for workflow run: 'RunId_${
-        run.runId
-      }-RunName_${run.runName.replaceAll(/\s+/g, '.')}'`
-    );
-
-    allArtifactsInRun.artifacts.forEach((artifact) => {
-      artifacts.push({
-        ...artifact,
-        runId: run.runId,
-        workflowId: run.workflowId
+        return undefined;
       });
-    });
+
+    if (allArtifactsInRun) {
+      core.info(
+        `Found ${allArtifactsInRun.artifacts.length} artifacts for workflow run: 'RunId_${
+          workflowRun.runId
+        }-RunName_${workflowRun.runName.replaceAll(/\s+/g, '.')}'`
+      );
+
+      allArtifactsInRun.artifacts.forEach((artifact) => {
+        artifacts.push({
+          ...artifact,
+          runId: workflowRun.runId,
+          workflowId: workflowRun.workflowId
+        });
+      });
+    }
   }
 
   core.info(
