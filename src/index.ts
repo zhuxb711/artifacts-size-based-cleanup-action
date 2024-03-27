@@ -248,15 +248,19 @@ const main = async () => {
           .join(', ')}]`
       );
     });
+  } else {
+    core.info(`No cleanup required, available space: ${bytes.format(limit - existingArtifactsTotalSize)}`);
   }
 };
 
-main().catch((err) => {
-  const pe = new PrettyError();
+main()
+  .then(() => core.info(`Artifacts cleanup action completed successfully`))
+  .catch((err) => {
+    const pe = new PrettyError();
 
-  if (core.getBooleanInput('failOnError')) {
-    core.setFailed(pe.render(err));
-  } else {
-    core.error(pe.render(err));
-  }
-});
+    if (core.getBooleanInput('failOnError')) {
+      core.setFailed(pe.render(err));
+    } else {
+      core.error(pe.render(err));
+    }
+  });
