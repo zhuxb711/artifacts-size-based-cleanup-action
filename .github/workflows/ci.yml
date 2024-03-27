@@ -26,8 +26,8 @@ jobs:
         uses: ./
         with:
           token: ${{secrets.ACCESS_TOKEN}}
-          limit: 0
-          requestSize: 0
+          limit: 1MB
+          fixedReservedSize: 1MB
           failOnError: true
 
       - name: Create test artifact
@@ -71,7 +71,7 @@ jobs:
         with:
           token: ${{secrets.ACCESS_TOKEN}}
           limit: 3MB
-          requestSize: 1MB
+          fixedReservedSize: 1MB
           failOnError: true
           removeDirection: oldest
 
@@ -90,7 +90,7 @@ jobs:
           limit: 3MB
           failOnError: true
           removeDirection: oldest
-          uploadPaths: |
+          artifactPaths: |
             ${{env.Env_TestFilePath1}}
             ${{env.Env_TestFilePath2}}
             ${{env.Env_TestFilePath3}}
@@ -126,7 +126,7 @@ jobs:
           limit: 5MB
           failOnError: true
           removeDirection: oldest
-          uploadPaths: |
+          artifactPaths: |
             ${{env.Env_TestFilePath1}}
             ${{env.Env_TestFilePath2}}
             ${{env.Env_TestFilePath3}}
@@ -146,7 +146,7 @@ jobs:
           limit: 8MB
           failOnError: true
           removeDirection: oldest
-          uploadPaths: |
+          artifactPaths: |
             ${{env.Env_TestFilePath1}}
             ${{env.Env_TestFilePath2}}
             ${{env.Env_TestFilePath3}}
@@ -165,6 +165,6 @@ jobs:
         with:
           token: ${{secrets.ACCESS_TOKEN}}
           limit: 3MB
-          requestSize: 512KB
+          fixedReservedSize: 512KB
           failOnError: true
           removeDirection: newest

@@ -1,17 +1,20 @@
 import { Utils } from './utils';
+import { uuid } from 'uuidv4';
 import { Artifact, DefaultArtifactClient } from '@actions/artifact';
 import bytes from 'bytes';
 import PrettyError from 'pretty-error';
 import _ from 'lodash';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+import * as fsPromise from 'fs/promises';
 
 const main = async () => {
   const token = core.getInput('token');
   const limit = bytes.parse(core.getInput('limit'));
-  const requestSize = core.getInput('requestSize');
+  const fixedReservedSize = Number(core.getInput('fixedReservedSize'));
   const removeDirection = core.getInput('removeDirection');
-  const uploadPaths = Utils.parseMultiLineInputs(core.getInput('uploadPaths'));
+  const simulateCompressionLevel = Number(core.getInput('simulateCompressionLevel'));
+  const artifactPaths = core.getMultilineInput('artifactPaths');
   const [ownerName, repoName] = process.env.GITHUB_REPOSITORY.split('/').map((part) => part.trim());
 
   if (limit < 0) {
@@ -22,19 +25,23 @@ const main = async () => {
     throw new Error('Missing Github access token');
   }
 
-  if (_.isEmpty(requestSize) && _.isEmpty(uploadPaths)) {
-    throw new Error('Either requestSize or uploadPaths must be provided');
+  if (_.isEmpty(artifactPaths) && (Number.isNaN(fixedReservedSize) || fixedReservedSize <= 0)) {
+    throw new Error('Either fixedReservedSize or artifactPaths must be provided');
   }
 
   if (!_.includes(['newest', 'oldest'], removeDirection)) {
     throw new Error(`Invalid removeDirection, must be either 'newest' or 'oldest'`);
   }
 
+  if (Number.isNaN(simulateCompressionLevel) || simulateCompressionLevel < 0 || simulateCompressionLevel > 9) {
+    throw new Error(`Invalid uploadCompressionLevel, must be a number between 0 and 9`);
+  }
+
   const validPaths = await Promise.all(
-    uploadPaths.map((path) => Utils.checkPathExists(path).then((result) => (result ? path : undefined)))
+    artifactPaths.map((path) => Utils.checkPathExists(path).then((result) => (result ? path : undefined)))
   ).then((paths) => paths.filter((path) => !_.isEmpty(path)));
 
-  _.differenceWith(uploadPaths, validPaths, (a, b) => a.localeCompare(b) == 0).forEach((path) =>
+  _.differenceWith(artifactPaths, validPaths, (a, b) => a.localeCompare(b) == 0).forEach((path) =>
     core.warning(`Path does not exists and will be ignored: '${path}'`)
   );
 
@@ -153,22 +160,29 @@ const main = async () => {
       .join(', ')}`
   );
 
-  const totalSize = _.isEmpty(requestSize) ? await Utils.calcuateMultiPathSize(validPaths) : bytes.parse(requestSize);
-  const artifactsTotalSize = artifacts.reduce((acc, artifact) => acc + artifact.size, 0);
+  const simulateAndGetCompressedSize = async (path: string, compressionLevel: number) => {
+    const zipPath = __dirname + '/temp' + `/size_simulate_${uuid()}.zip`;
+    await Utils.createCompressedZipFile(path, zipPath, compressionLevel);
+    return await fsPromise.stat(zipPath).then((stat) => stat.size);
+  };
 
-  if (totalSize < 0) {
-    throw new Error('Invalid requestSize, must be a positive number');
+  const pendingArtifactsTotalSize =
+    fixedReservedSize > 0
+      ? bytes.parse(fixedReservedSize)
+      : _.sum(
+          await Promise.all(validPaths.map((path) => simulateAndGetCompressedSize(path, simulateCompressionLevel)))
+        );
+  const existingArtifactsTotalSize = _.sumBy(artifacts, (artifact) => artifact.size);
+
+  if (pendingArtifactsTotalSize > limit) {
+    throw new Error(`Total size of artifacts to upload exceeds the limit: ${bytes.format(pendingArtifactsTotalSize)}`);
   }
 
-  if (totalSize > limit) {
-    throw new Error(`Total size of artifacts to upload exceeds the limit: ${bytes.format(totalSize)}`);
-  }
+  core.info(`Total size that need to be reserved: ${bytes.format(pendingArtifactsTotalSize)}`);
+  core.info(`Total size of all existing artifacts: ${bytes.format(existingArtifactsTotalSize)}`);
 
-  core.info(`Total size that need to be reserved: ${bytes.format(totalSize)}`);
-  core.info(`Total size of all existing artifacts: ${bytes.format(artifactsTotalSize)}`);
-
-  if (totalSize + artifactsTotalSize > limit) {
-    const freeSpaceNeeded = totalSize + artifactsTotalSize - limit;
+  if (pendingArtifactsTotalSize + existingArtifactsTotalSize > limit) {
+    const freeSpaceNeeded = pendingArtifactsTotalSize + existingArtifactsTotalSize - limit;
     const sortedByDateArtifacts = artifacts.sort((a, b) =>
       removeDirection === 'oldest'
         ? (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0)
@@ -208,13 +222,15 @@ const main = async () => {
       }
 
       if ((deletedSize += size) >= freeSpaceNeeded) {
-        core.info(`Summary: available space after cleanup: ${bytes.format(limit - artifactsTotalSize + deletedSize)}`);
+        core.info(
+          `Summary: available space after cleanup: ${bytes.format(limit - existingArtifactsTotalSize + deletedSize)}`
+        );
         break;
       }
     }
 
     core.info(
-      `Summary: free up space after cleanup: ${bytes.format(deletedArtifacts.reduce((acc, a) => acc + a.size, 0))}`
+      `Summary: free up space after cleanup: ${bytes.format(_.sumBy(deletedArtifacts, (artifact) => artifact.size))}`
     );
 
     Object.entries(_.groupBy(deletedArtifacts, (artifact) => artifact.runId)).forEach(([runId, artifact]) => {

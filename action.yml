@@ -2,8 +2,8 @@ name: Artifact Size Based Cleanup
 description: Cleanup artifacts base on the size limit to make sure the storage space is not exhausted.
 author: Ruofan <zrfcfgs@outlook.com>
 branding:
-  icon: "archive"
-  color: "yellow"
+  icon: 'archive'
+  color: 'yellow'
 inputs:
   token:
     description: The GitHub token used to access the repository. Must be granted access permission with 'workflow' scope.
@@ -11,12 +11,16 @@ inputs:
   limit:
     description: The maximum size of the artifacts in bytes for current repository. Action will make sure the all artifacts size is less than this limit and reserve enough space for new artifacts. Allowed values includes - [1024, 256KB, 512MB, 1.5GB].
     required: true
-  requestSize:
-    description: Optional. The size of the artifacts to be uploaded in bytes. If not provided, will use the value of 'uploadPaths' to calculate the size of the artifacts to be uploaded automatically. Allowed values includes - [1024, 256KB, 512MB, 1.5GB]. An exception will be thrown if both 'requestSize' and 'uploadPaths' are not provided.
+  fixedReservedSize:
+    description: Optional. Use a fixed size to reserve the space. If not provided, will use the value of 'artifactPaths' to calculate the size of the artifacts to be uploaded automatically. Allowed values includes - [1024, 256KB, 512MB, 1.5GB]. An exception will be thrown if both 'fixedReservedSize' and 'artifactPaths' are not provided.
     required: false
-  uploadPaths:
-    description: Optional. The paths of the artifacts to be uploaded, will calculate the size automatically. If not provided, will use the value of 'requestSize'. An exception will be thrown if both 'requestSize' and 'uploadPaths' are not provided.
+  artifactPaths:
+    description: Optional. The paths of the artifacts to be uploaded, will calculate the size automatically. If not provided, will use the value of 'fixedReservedSize'. An exception will be thrown if both 'fixedReservedSize' and 'artifactPaths' are not provided.
     required: false
+  simulateCompressionLevel:
+    description: Optional. The compression level of the artifacts to be uploaded. Should be the same value as you specific in the upload artifacts action. Will use this value to simulate the compression and calculate the actual size of the artifact after compression. If not provided, will use the default value of 6.
+    required: false
+    default: 6
   failOnError:
     description: Indicates whether the action should fail once encountering any errors.
     required: false
