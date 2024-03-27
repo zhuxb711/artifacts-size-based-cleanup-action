@@ -1,5 +1,5 @@
 import { Utils } from './utils';
-import { uuid } from 'uuidv4';
+import { v4 as uuidv4 } from 'uuid';
 import { Artifact, DefaultArtifactClient } from '@actions/artifact';
 import bytes from 'bytes';
 import PrettyError from 'pretty-error';
@@ -161,7 +161,7 @@ const main = async () => {
   );
 
   const simulateAndGetCompressedSize = async (path: string, compressionLevel: number) => {
-    const zipPath = __dirname + '/temp' + `/size_simulate_${uuid()}.zip`;
+    const zipPath = __dirname + '/temp' + `/size_simulate_${uuidv4()}.zip`;
     await Utils.createCompressedZipFile(path, zipPath, compressionLevel);
     return await fsPromise.stat(zipPath).then((stat) => stat.size);
   };

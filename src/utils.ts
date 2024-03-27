@@ -21,7 +21,9 @@ export class Utils {
     const config_zip_buffer = process.env.CLEANUP_OPTION_ZIP_BUFFER;
     const zipBuffer = _.isEmpty(config_zip_buffer) ? 1024 * 1024 * 8 : Number(config_zip_buffer);
 
-    const zipStream = fs.createWriteStream(destinationPath);
+    const zipStream = fs.createWriteStream(destinationPath, {
+      flags: 'ax'
+    });
     const zipArchiver = archiver.create('zip', {
       zlib: {
         level: compressionLevel
@@ -41,6 +43,14 @@ export class Utils {
       }
     });
 
+    zipStream.on('open', () => {
+      console.log(`Write stream opened for '${destinationPath}'`);
+    });
+    zipStream.on('error', (err) => {
+      throw new Error(
+        `An error has occurred while creating write stream for '${destinationPath}', message: ${err.message}`
+      );
+    });
     zipStream.on('close', () => {
       console.log(`Archiver zipped ${zipArchiver.pointer()} total bytes`);
     });
