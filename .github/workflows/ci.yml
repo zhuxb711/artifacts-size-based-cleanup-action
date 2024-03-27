@@ -88,7 +88,7 @@ jobs:
         uses: ./
         with:
           token: ${{secrets.ACCESS_TOKEN}}
-          limit: 3MB
+          limit: 4MB
           failOnError: true
           removeDirection: oldest
           simulateCompressionLevel: 0
