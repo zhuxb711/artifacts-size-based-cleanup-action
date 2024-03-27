@@ -11,13 +11,13 @@ import * as fsPromise from 'fs/promises';
 const main = async () => {
   const token = core.getInput('token');
   const limit = bytes.parse(core.getInput('limit'));
-  const fixedReservedSize = Number(core.getInput('fixedReservedSize'));
   const removeDirection = core.getInput('removeDirection');
+  const fixedReservedSize = bytes.parse(core.getInput('fixedReservedSize'));
   const simulateCompressionLevel = Number(core.getInput('simulateCompressionLevel'));
   const artifactPaths = core.getMultilineInput('artifactPaths');
   const [ownerName, repoName] = process.env.GITHUB_REPOSITORY.split('/').map((part) => part.trim());
 
-  if (limit < 0) {
+  if (Number.isNaN(limit) || limit < 0) {
     throw new Error('Invalid limit, must be a positive number');
   }
 
@@ -168,7 +168,7 @@ const main = async () => {
 
   const pendingArtifactsTotalSize =
     fixedReservedSize > 0
-      ? bytes.parse(fixedReservedSize)
+      ? fixedReservedSize
       : _.sum(
           await Promise.all(validPaths.map((path) => simulateAndGetCompressedSize(path, simulateCompressionLevel)))
         );
