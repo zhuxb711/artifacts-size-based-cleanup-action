@@ -249,13 +249,9 @@ const main = async () => {
       );
     });
   }
-
-  core.info(`Artifacts cleanup action completed`);
 };
 
-try {
-  main();
-} catch (err) {
+main().catch((err) => {
   const pe = new PrettyError();
 
   if (core.getBooleanInput('failOnError')) {
@@ -263,4 +259,4 @@ try {
   } else {
     core.error(pe.render(err));
   }
-}
+});

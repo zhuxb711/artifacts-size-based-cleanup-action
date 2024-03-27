@@ -74,6 +74,7 @@ jobs:
           fixedReservedSize: 1MB
           failOnError: true
           removeDirection: oldest
+          simulateCompressionLevel: 0
 
       - name: Upload test artifact 4
         uses: actions/upload-artifact@v4.3.1
@@ -90,6 +91,7 @@ jobs:
           limit: 3MB
           failOnError: true
           removeDirection: oldest
+          simulateCompressionLevel: 0
           artifactPaths: |
             ${{env.Env_TestFilePath1}}
             ${{env.Env_TestFilePath2}}
@@ -126,6 +128,7 @@ jobs:
           limit: 5MB
           failOnError: true
           removeDirection: oldest
+          simulateCompressionLevel: 0
           artifactPaths: |
             ${{env.Env_TestFilePath1}}
             ${{env.Env_TestFilePath2}}
@@ -146,6 +149,7 @@ jobs:
           limit: 8MB
           failOnError: true
           removeDirection: oldest
+          simulateCompressionLevel: 0
           artifactPaths: |
             ${{env.Env_TestFilePath1}}
             ${{env.Env_TestFilePath2}}
@@ -168,3 +172,4 @@ jobs:
           fixedReservedSize: 512KB
           failOnError: true
           removeDirection: newest
+          simulateCompressionLevel: 0
