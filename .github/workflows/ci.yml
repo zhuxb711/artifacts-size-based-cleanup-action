@@ -75,10 +75,10 @@ jobs:
           failOnError: true
           removeDirection: oldest
 
-      - name: Upload test artifact 1
+      - name: Upload test artifact 4
         uses: actions/upload-artifact@v4.3.1
         with:
-          name: Test Artifact 1
+          name: Test Artifact 4
           if-no-files-found: error
           compression-level: 0
           path: ${{env.Env_TestFilePath1}}
@@ -95,29 +95,29 @@ jobs:
             ${{env.Env_TestFilePath2}}
             ${{env.Env_TestFilePath3}}
 
-      - name: Upload test artifact 1
+      - name: Upload test artifact 5
         uses: actions/upload-artifact@v4.3.1
         with:
-          name: Test Artifact 1
+          name: Test Artifact 5
           if-no-files-found: error
           compression-level: 0
           path: ${{env.Env_TestFilePath1}}
 
-      - name: Upload test artifact 2
+      - name: Upload test artifact 6
         uses: actions/upload-artifact@v4.3.1
         with:
-          name: Test Artifact 2
+          name: Test Artifact 6
           if-no-files-found: error
           compression-level: 0
-          path: ${{env.Env_TestFilePath2}}
+          path: ${{env.Env_TestFilePath1}}
 
-      - name: Upload test artifact 3
+      - name: Upload test artifact 7
         uses: actions/upload-artifact@v4.3.1
         with:
-          name: Test Artifact 3
+          name: Test Artifact 7
           if-no-files-found: error
           compression-level: 0
-          path: ${{env.Env_TestFilePath3}}
+          path: ${{env.Env_TestFilePath1}}
 
       - name: Run cleanup action test 3
         uses: ./
@@ -131,10 +131,10 @@ jobs:
             ${{env.Env_TestFilePath2}}
             ${{env.Env_TestFilePath3}}
 
-      - name: Upload test artifact 1
+      - name: Upload test artifact 8
         uses: actions/upload-artifact@v4.3.1
         with:
-          name: Test Artifact 1
+          name: Test Artifact 8
           if-no-files-found: error
           compression-level: 0
           path: ${{env.Env_TestFilePath1}}
@@ -152,13 +152,13 @@ jobs:
             ${{env.Env_TestFilePath3}}
             ${{env.Env_TestDirectory}}
 
-      - name: Upload test artifact 2
+      - name: Upload test artifact 9
         uses: actions/upload-artifact@v4.3.1
         with:
-          name: Test Artifact 2
+          name: Test Artifact 9
           if-no-files-found: error
           compression-level: 0
-          path: ${{env.Env_TestFilePath2}}
+          path: ${{env.Env_TestFilePath1}}
 
       - name: Run cleanup action test 5
         uses: ./
