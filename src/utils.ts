@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as fsPromise from 'fs/promises';
 import * as archiver from 'archiver';
 import * as core from '@actions/core';
+import * as streamPromise from 'stream/promises';
 
 export class Utils {
   static async checkPathExists(path: string): Promise<boolean> {
@@ -19,7 +20,10 @@ export class Utils {
     const allowedZipBuffer = _.isEmpty(config_zip_buffer) ? 8 * 1024 * 1024 : Number(config_zip_buffer);
 
     const zipStream = fs.createWriteStream(destinationPath, {
-      flags: 'ax'
+      flags: 'ax',
+      autoClose: true,
+      emitClose: true,
+      flush: true
     });
 
     const zipArchiver = archiver.create('zip', {
@@ -42,7 +46,7 @@ export class Utils {
     });
 
     zipStream.on('open', () => {
-      core.info(`Archiver opened write stream for '${destinationPath}'`);
+      core.debug(`Archiver opened write stream for '${destinationPath}'`);
     });
     zipStream.on('error', (err) => {
       throw new Error(
@@ -50,7 +54,7 @@ export class Utils {
       );
     });
     zipStream.on('close', () => {
-      core.info(
+      core.debug(
         `Archiver zipped '${sourcePath}' into '${destinationPath}', size: ${bytes.format(zipArchiver.pointer())}`
       );
     });
@@ -68,5 +72,6 @@ export class Utils {
     }
 
     await zipArchiver.finalize();
+    await streamPromise.finished(zipStream);
   }
 }
