@@ -61,6 +61,28 @@ const main = async () => {
   const octokit = github.getOctokit(
     token,
     {
+      log: {
+        debug: (message) => {
+          if (core.isDebug()) {
+            core.debug(message);
+          }
+        },
+        info: (message) => {
+          if (core.isDebug()) {
+            core.info(message);
+          }
+        },
+        warn: (message) => {
+          if (core.isDebug()) {
+            core.warning(message);
+          }
+        },
+        error: (message) => {
+          if (core.isDebug()) {
+            core.error(message);
+          }
+        }
+      },
       request: {
         retries: maxAllowedRetries
       },
