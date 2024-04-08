@@ -52,7 +52,7 @@ const main = async () => {
   const enableOctokitRetries = _.isEmpty(config_retries_enable) || config_retries_enable === 'true';
   const maxAllowedRetries = _.isEmpty(config_max_allowed_retries) ? 5 : Number(config_max_allowed_retries);
 
-  core.debug(
+  core.info(
     `Start creating octokit client with retries ${
       enableOctokitRetries ? 'enabled' : 'disabled'
     }, max allowed retries: ${maxAllowedRetries}`
@@ -61,28 +61,6 @@ const main = async () => {
   const octokit = github.getOctokit(
     token,
     {
-      log: {
-        debug: (message) => {
-          if (core.isDebug()) {
-            core.debug(message);
-          }
-        },
-        info: (message) => {
-          if (core.isDebug()) {
-            core.info(message);
-          }
-        },
-        warn: (message) => {
-          if (core.isDebug()) {
-            core.warning(message);
-          }
-        },
-        error: (message) => {
-          if (core.isDebug()) {
-            core.error(message);
-          }
-        }
-      },
       request: {
         retries: maxAllowedRetries
       },
@@ -120,7 +98,7 @@ const main = async () => {
     throttling
   );
 
-  core.debug(`Querying all workflow runs for repository: '${ownerName}/${repoName}'`);
+  core.info(`Querying all workflow runs for repository: '${ownerName}/${repoName}'`);
 
   const config_paginate_size = process.env.CLEANUP_OPTION_PAGINATE_SIZE;
   const apiCallPagniateSize = _.isEmpty(config_paginate_size) ? 50 : Number(config_paginate_size);
@@ -143,7 +121,7 @@ const main = async () => {
   );
 
   Object.entries(_.groupBy(allWorkflowRuns, (run) => run.workflowId)).forEach(([workflowId, runs]) => {
-    core.debug(
+    core.info(
       `Workflow '${runs.find((run) => run.workflowId === Number(workflowId))?.workflowName}' has ${
         runs.length
       } runs: ['${runs.map((run) => `RunId_${run.runId}-RunName_${run.runName.replaceAll(/\s+/g, '.')}`).join(', ')}']`
@@ -174,7 +152,7 @@ const main = async () => {
       });
 
     if (allArtifactsInRun) {
-      core.debug(
+      core.info(
         `Found ${allArtifactsInRun.artifacts.length} artifacts for workflow run: 'RunId_${
           workflowRun.runId
         }-RunName_${workflowRun.runName.replaceAll(/\s+/g, '.')}'`
@@ -190,7 +168,7 @@ const main = async () => {
     }
   }
 
-  core.debug(
+  core.info(
     `Found ${artifacts.length} existing artifacts in total. Listing all artifacts: ${artifacts
       .map(
         (artifact) =>
@@ -275,7 +253,7 @@ const main = async () => {
     );
 
     Object.entries(_.groupBy(deletedArtifacts, (artifact) => artifact.runId)).forEach(([runId, artifact]) => {
-      core.debug(
+      core.info(
         `Summary: ${artifact.length} artifacts deleted from workflow run 'RunId_${runId}-RunName_${allWorkflowRuns
           .find((run) => run.runId === Number(runId))
           ?.runName.replaceAll(/\s+/g, '.')}': [${artifact

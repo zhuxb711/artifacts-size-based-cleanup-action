@@ -46,7 +46,7 @@ export class Utils {
     });
 
     zipStream.on('open', () => {
-      core.debug(`Archiver opened write stream for '${destinationPath}'`);
+      core.info(`Archiver opened write stream for '${destinationPath}'`);
     });
     zipStream.on('error', (err) => {
       throw new Error(
@@ -54,7 +54,7 @@ export class Utils {
       );
     });
     zipStream.on('close', () => {
-      core.debug(
+      core.info(
         `Archiver zipped '${sourcePath}' into '${destinationPath}', size: ${bytes.format(zipArchiver.pointer())}`
       );
     });
