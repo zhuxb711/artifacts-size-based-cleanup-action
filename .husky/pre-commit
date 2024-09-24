@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 npm i -g @vercel/ncc
 yarn build
-git add dist/index.js
+git add dist/*.js
