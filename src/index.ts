@@ -1,6 +1,6 @@
 import { Utils } from './utils';
 import { v4 as uuidv4 } from 'uuid';
-import { Artifact, DefaultArtifactClient, ListArtifactsResponse } from '@actions/artifact';
+import { Artifact, ArtifactNotFoundError, DefaultArtifactClient, ListArtifactsResponse } from '@actions/artifact';
 import bytes from 'bytes';
 import PrettyError from 'pretty-error';
 import _ from 'lodash';
@@ -230,14 +230,25 @@ const main = async () => {
           workflowId: workflowId
         });
 
-        await client.deleteArtifact(name, {
-          findBy: {
-            token: token,
-            workflowRunId: runId,
-            repositoryName: repoName,
-            repositoryOwner: ownerName
+        try {
+          await client.deleteArtifact(name, {
+            findBy: {
+              token: token,
+              workflowRunId: runId,
+              repositoryName: repoName,
+              repositoryOwner: ownerName
+            }
+          });
+        } catch (error) {
+          if (error instanceof ArtifactNotFoundError) {
+            core.warning(
+              `Failed to delete artifact '${name}' within RunId '${runId}' because artifact is not found and maybe expired.`
+            );
+            continue;
           }
-        });
+
+          throw error;
+        }
       }
 
       if ((deletedSize += size) >= freeSpaceNeeded) {
