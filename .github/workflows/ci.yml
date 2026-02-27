@@ -42,7 +42,7 @@ jobs:
           Copy-Item "${{env.Env_TestFilePath3}}" -Destination "${{env.Env_TestDirectory}}"
 
       - name: Upload test artifact 1
-        uses: actions/upload-artifact@v6.0.0
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: Test Artifact 1
           if-no-files-found: error
@@ -50,7 +50,7 @@ jobs:
           path: ${{env.Env_TestFilePath1}}
 
       - name: Upload test artifact 2
-        uses: actions/upload-artifact@v6.0.0
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: Test Artifact 2
           if-no-files-found: error
@@ -58,7 +58,7 @@ jobs:
           path: ${{env.Env_TestFilePath2}}
 
       - name: Upload test artifact 3
-        uses: actions/upload-artifact@v6.0.0
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: Test Artifact 3
           if-no-files-found: error
@@ -75,7 +75,7 @@ jobs:
           simulateCompressionLevel: 0
 
       - name: Upload test artifact 4
-        uses: actions/upload-artifact@v6.0.0
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: Test Artifact 4
           if-no-files-found: error
@@ -95,7 +95,7 @@ jobs:
             ${{env.Env_TestFilePath3}}
 
       - name: Upload test artifact 5
-        uses: actions/upload-artifact@v6.0.0
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: Test Artifact 5
           if-no-files-found: error
@@ -103,7 +103,7 @@ jobs:
           path: ${{env.Env_TestFilePath1}}
 
       - name: Upload test artifact 6
-        uses: actions/upload-artifact@v6.0.0
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: Test Artifact 6
           if-no-files-found: error
@@ -111,7 +111,7 @@ jobs:
           path: ${{env.Env_TestFilePath1}}
 
       - name: Upload test artifact 7
-        uses: actions/upload-artifact@v6.0.0
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: Test Artifact 7
           if-no-files-found: error
@@ -131,7 +131,7 @@ jobs:
             ${{env.Env_TestFilePath3}}
 
       - name: Upload test artifact 8
-        uses: actions/upload-artifact@v6.0.0
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: Test Artifact 8
           if-no-files-found: error
@@ -152,7 +152,7 @@ jobs:
             ${{env.Env_TestDirectory}}
 
       - name: Upload test artifact 9
-        uses: actions/upload-artifact@v6.0.0
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: Test Artifact 9
           if-no-files-found: error
