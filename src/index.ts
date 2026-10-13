@@ -1,15 +1,15 @@
-import { Utils } from './utils';
-import { Artifact } from './types';
-import { v4 as uuidv4 } from 'uuid';
-import { retry } from '@octokit/plugin-retry';
-import { throttling } from '@octokit/plugin-throttling';
+import { stat, unlink } from 'node:fs/promises';
 import artifact, { ArtifactNotFoundError } from '@actions/artifact';
-import bytes from 'bytes';
-import PrettyError from 'pretty-error';
-import _ from 'lodash';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import * as fsPromise from 'fs/promises';
+import { retry } from '@octokit/plugin-retry';
+import { throttling } from '@octokit/plugin-throttling';
+import bytes from 'bytes';
+import _ from 'lodash';
+import PrettyError from 'pretty-error';
+import { v4 as uuidv4 } from 'uuid';
+import { Artifact } from './types';
+import { Utils } from './utils';
 
 const main = async () => {
   const token = core.getInput('token');
@@ -126,11 +126,9 @@ const main = async () => {
         const zipPath = import.meta.dirname + `/size_simulate_${uuidv4()}.zip`;
 
         try {
-          return await fsPromise
-            .stat(await Utils.createZipFile(path, zipPath, compressionLevel))
-            .then((stats) => stats.size);
+          return await stat(await Utils.createZipFile(path, zipPath, compressionLevel)).then((stats) => stats.size);
         } finally {
-          await fsPromise.unlink(zipPath).catch(() => {
+          await unlink(zipPath).catch(() => {
             core.warning(`Failed to delete simulated zip file: '${zipPath}'`);
           });
         }

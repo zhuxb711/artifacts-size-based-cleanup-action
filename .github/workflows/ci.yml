@@ -5,165 +5,44 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   CITest:
-    runs-on: windows-latest
-    permissions:
-      actions: write
-      contents: read
-    env:
-      Env_TestFilePath1: ${{github.workspace}}\TestFile1.txt
-      Env_TestFilePath2: ${{github.workspace}}\TestFile2.txt
-      Env_TestFilePath3: ${{github.workspace}}\TestFile3.txt
-      Env_TestDirectory: ${{github.workspace}}\TestDirectory
-      Env_DownloadDirectory: ${{github.workspace}}\Downloads
+    name: Test (Ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
-      - name: Cleanup all artifacts
-        uses: ./
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
         with:
-          limit: 0KB
-          failOnError: true
+          node-version: 24
 
-      - name: Create test artifact
-        shell: pwsh
-        run: |
-          fsutil file createnew "${{env.Env_TestFilePath1}}" 1048576
-          fsutil file createnew "${{env.Env_TestFilePath2}}" 1048576
-          fsutil file createnew "${{env.Env_TestFilePath3}}" 1048576
-          New-Item -Path "${{env.Env_TestDirectory}}" -ItemType Directory
-          New-Item -Path "${{env.Env_DownloadDirectory}}" -ItemType Directory
-          Copy-Item "${{env.Env_TestFilePath1}}" -Destination "${{env.Env_TestDirectory}}"
-          Copy-Item "${{env.Env_TestFilePath2}}" -Destination "${{env.Env_TestDirectory}}"
-          Copy-Item "${{env.Env_TestFilePath3}}" -Destination "${{env.Env_TestDirectory}}"
+      - name: Enable Corepack
+        run: corepack enable
 
-      - name: Upload test artifact 1
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: Test Artifact 1
-          if-no-files-found: error
-          compression-level: 0
-          path: ${{env.Env_TestFilePath1}}
+      - name: Install dependencies
+        run: yarn install --immutable
 
-      - name: Upload test artifact 2
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: Test Artifact 2
-          if-no-files-found: error
-          compression-level: 0
-          path: ${{env.Env_TestFilePath2}}
+      - name: Type check
+        run: yarn tsc --noEmit -p tsconfig.build.json
 
-      - name: Upload test artifact 3
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: Test Artifact 3
-          if-no-files-found: error
-          compression-level: 0
-          path: ${{env.Env_TestFilePath3}}
+      - name: Test cleanup behavior
+        run: yarn node --experimental-vm-modules --test --test-timeout=10000 .github/tests/cleanup.test.mjs
 
-      - name: Run cleanup action test 1
-        uses: ./
-        with:
-          limit: 3MB
-          fixedReservedSize: 1MB
-          failOnError: true
-          removeDirection: oldest
-          simulateCompressionLevel: 0
+      - name: Build action
+        run: yarn dlx @vercel/ncc@0.38.4 build src/index.ts --target es2022
 
-      - name: Upload test artifact 4
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: Test Artifact 4
-          if-no-files-found: error
-          compression-level: 0
-          path: ${{env.Env_TestFilePath1}}
-
-      - name: Run cleanup action test 2
-        uses: ./
-        with:
-          limit: 4MB
-          failOnError: true
-          removeDirection: oldest
-          simulateCompressionLevel: 0
-          artifactPaths: |
-            ${{env.Env_TestFilePath1}}
-            ${{env.Env_TestFilePath2}}
-            ${{env.Env_TestFilePath3}}
-
-      - name: Upload test artifact 5
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: Test Artifact 5
-          if-no-files-found: error
-          compression-level: 0
-          path: ${{env.Env_TestFilePath1}}
-
-      - name: Upload test artifact 6
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: Test Artifact 6
-          if-no-files-found: error
-          compression-level: 0
-          path: ${{env.Env_TestFilePath1}}
-
-      - name: Upload test artifact 7
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: Test Artifact 7
-          if-no-files-found: error
-          compression-level: 0
-          path: ${{env.Env_TestFilePath1}}
-
-      - name: Run cleanup action test 3
-        uses: ./
-        with:
-          limit: 5MB
-          failOnError: true
-          removeDirection: oldest
-          simulateCompressionLevel: 0
-          artifactPaths: |
-            ${{env.Env_TestFilePath1}}
-            ${{env.Env_TestFilePath2}}
-            ${{env.Env_TestFilePath3}}
-
-      - name: Upload test artifact 8
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: Test Artifact 8
-          if-no-files-found: error
-          compression-level: 0
-          path: ${{env.Env_TestFilePath1}}
-
-      - name: Run cleanup action test 4
-        uses: ./
-        with:
-          limit: 8MB
-          failOnError: true
-          removeDirection: oldest
-          simulateCompressionLevel: 0
-          artifactPaths: |
-            ${{env.Env_TestFilePath1}}
-            ${{env.Env_TestFilePath2}}
-            ${{env.Env_TestFilePath3}}
-            ${{env.Env_TestDirectory}}
-
-      - name: Upload test artifact 9
-        uses: actions/upload-artifact@v7.0.2
-        with:
-          name: Test Artifact 9
-          if-no-files-found: error
-          compression-level: 0
-          path: ${{env.Env_TestFilePath1}}
-
-      - name: Run cleanup action test 5
-        uses: ./
-        with:
-          limit: 3MB
-          fixedReservedSize: 512KB
-          failOnError: true
-          removeDirection: newest
-          simulateCompressionLevel: 0
+      - name: Check bundled JavaScript syntax
+        run: node --check dist/index.js

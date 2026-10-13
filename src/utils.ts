@@ -1,17 +1,16 @@
-import path from 'path';
-import bytes from 'bytes';
-import _ from 'lodash';
-import { glob } from 'glob';
-import * as fs from 'fs';
-import * as fsPromise from 'fs/promises';
-import * as archiver from 'archiver';
+import { constants, createWriteStream } from 'node:fs';
+import { access, stat } from 'node:fs/promises';
+import { basename } from 'node:path';
+import { finished } from 'node:stream/promises';
 import * as core from '@actions/core';
-import * as streamPromise from 'stream/promises';
+import { ZipArchive } from 'archiver';
+import bytes from 'bytes';
+import { glob } from 'glob';
+import _ from 'lodash';
 
 export class Utils {
   static async checkPathExists(path: string): Promise<boolean> {
-    return await fsPromise
-      .access(path, fs.constants.F_OK)
+    return await access(path, constants.F_OK)
       .then(() => true)
       .catch(() => false);
   }
@@ -34,14 +33,14 @@ export class Utils {
     const config_zip_buffer = process.env.CLEANUP_OPTION_ZIP_BUFFER;
     const allowedZipBuffer = _.isEmpty(config_zip_buffer) ? 8 * 1024 * 1024 : Number(config_zip_buffer);
 
-    const zipStream = fs.createWriteStream(destinationPath, {
+    const zipStream = createWriteStream(destinationPath, {
       flags: 'ax',
       autoClose: true,
       emitClose: true,
       flush: true
     });
 
-    const zipArchiver = archiver.create('zip', {
+    const zipArchiver = new ZipArchive({
       zlib: {
         level: compressionLevel
       },
@@ -75,19 +74,19 @@ export class Utils {
     });
 
     if (await Utils.checkPathExists(sourcePath)) {
-      const fileStats = await fsPromise.stat(sourcePath);
+      const fileStats = await stat(sourcePath);
 
       if (fileStats.isDirectory()) {
         zipArchiver.directory(sourcePath, false);
       } else {
         zipArchiver.file(sourcePath, {
-          name: path.basename(sourcePath)
+          name: basename(sourcePath)
         });
       }
     }
 
     await zipArchiver.finalize();
-    await streamPromise.finished(zipStream);
+    await finished(zipStream);
 
     return destinationPath;
   }
