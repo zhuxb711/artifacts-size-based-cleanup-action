@@ -42,7 +42,7 @@ jobs:
         run: yarn node --experimental-vm-modules --test --test-timeout=10000 .github/tests/cleanup.test.mjs
 
       - name: Build action
-        run: yarn dlx @vercel/ncc@0.38.4 build src/index.ts --target es2022
+        run: yarn dlx @vercel/ncc build src/index.ts --target es2022
 
       - name: Check bundled JavaScript syntax
         run: node --check dist/index.js
